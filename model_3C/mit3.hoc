@@ -1,0 +1,170 @@
+// mit3.hoc
+
+// 3 + 2 compartment mitral cell model. One compartment represents the 
+// primary dendrite tuft in the glomerulus, one the secondary dendrites 
+// and one the soma. The other two are small linking compartments
+// which represent almost all the axial resistance in the model.
+
+// Shailesh Appukuttan 29-Sep-2020
+// based on https://senselab.med.yale.edu/modeldb/ShowModel?model=2487&file=/mit4/mit4.hoc
+
+// Note that although in theory the output is independent of total area,
+//  due to rounding errors this only holds for Atotal > ~ 1e4
+
+load_file("tabchannels.hoc")
+
+// Set parameters
+Atotal		= 100000	// um2
+Len		= 100		// um
+RM		= 100000	// ohm.cm2
+Erest		= -65		// mV
+p 		= 0.0845
+q 		= 0.14
+gsg 		= 4.44e-5	// S.cm-2
+gsd 		= 3.13e-4	// S.cm-2
+alphas 		= 1.78
+alphag		= 1.84
+Ifull		= 0.0		    // nA; parameter to be set for specifying stimulus
+injcurrdens = Ifull/100072	// injected current density (nA.um-2)
+
+// Create cell
+create soma, glom, dend, s2d, s2g
+access soma
+
+soma connect s2g(0),0
+s2g connect glom(0),1
+soma connect s2d(0),1
+s2d connect dend(0),1
+
+objref cvode
+cvode  = new CVode(1)
+
+// Insert stimuli
+objref soma_stim, glom_stim
+soma {
+   soma_stim = new IClamp(0.5)
+   soma_stim.del = 0
+   soma_stim.amp = 0
+   soma_stim.dur = 0
+}
+glom {
+   glom_stim = new IClamp(0.5)
+   glom_stim.del = 0
+   glom_stim.amp = 0
+   glom_stim.dur = 0
+}
+
+// Set cell properties
+
+forsec "*2*" {
+   L = 1
+   diam = 1
+}
+
+soma {
+
+   insert pas
+   insert nafast
+   insert kfasttab
+   insert kslowtab
+   insert kA
+   insert kca3
+   insert lcafixed
+   insert cad
+   depth_cad = 8
+
+   L			= Len
+   Ra			= 1e-7		// ohm.cm This value can be set to any small number
+					// although if it too small rounding errors are a problem
+					// The range 1e-7 to 100 is basically OK
+   e_pas 		= Erest		// reversal potential mV
+   g_pas 		= 1/RM		// membrane conductance S.cm-2
+
+   gnabar_nafast 	= 0.1532	// S.cm-2
+   gkbar_kfasttab 	= 0.1956
+   gkbar_kslowtab 	= 0.0028
+   gkbar_kA 		= 0.00587
+   gkbar_kca3 		= 0.0142
+   gcabar_lcafixed 	= 0.0040
+}
+
+glom {
+
+   insert pas
+   insert kslowtab
+   insert lcafixed
+   insert cad
+   depth_cad = 8
+
+   L			= Len
+   Ra			= 1e-7
+   e_pas 		= Erest
+   g_pas		= 1/RM
+
+   // value varies w.r.t. 3C_param.hoc
+   gkbar_kslowtab	= 0.020
+   gcabar_lcafixed	= 0.0095
+}
+
+dend {
+
+   insert pas
+   insert kfasttab
+   insert nafast
+   L			= Len
+   Ra			= 1e-7
+   e_pas 		= Erest
+   g_pas		= 1/RM
+
+   // value varies w.r.t. 3C_param.hoc
+   gkbar_kfasttab	= 0.0330
+   gnabar_nafast	= 0.0226
+}
+
+// Define procedures
+
+proc set_ra() {  			// the argument is the conductance (S.cm-2)
+   Ra = (PI*1e4)/(4*Atotal) * ( 1/$1 )	// ohm.cm
+}
+
+proc set_size() {			// the argument is the membrane area (um2)
+   diam = $1/(PI*Len)			// um
+}
+
+// set areas and link resistances
+injcurrdens = Ifull/100072	//note that 100072 um2 is the total membrane area of the full model
+Asoma = p*Atotal
+Aglom = q*Atotal
+Adend = Atotal - Asoma - Aglom
+
+soma {
+    set_size(Asoma)
+}
+
+glom {
+    set_size(Aglom)
+}
+
+dend {
+    set_size(Adend)
+}
+
+s2d { set_ra(gsd) }
+s2g { set_ra(gsg) }
+
+// set reversal potentials, etc.
+
+forall if (ismembrane("ca_ion")) {
+    eca = 70	// mV
+	cai = 0.00001	// mM 
+	cao = 2		// mM
+	ion_style("ca_ion",3,2,0,0,1)
+}
+
+forall if (ismembrane("na_ion")) {
+	ena = 45	// mV
+}
+
+forall if (ismembrane("k_ion")) {
+	ek  = -70	// mV
+}

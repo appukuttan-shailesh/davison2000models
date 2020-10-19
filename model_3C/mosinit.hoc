@@ -1,0 +1,3 @@
+load_file("stdrun.hoc")
+load_file("mit3_init.hoc")
+

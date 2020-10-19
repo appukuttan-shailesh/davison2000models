@@ -1,0 +1,8 @@
+// mit3_init.hoc
+// Runs the mit3 model
+// Shailesh Appukuttan 29-Sep-2020
+// based on https://senselab.med.yale.edu/modeldb/ShowModel?model=2487&file=/mit4/mit4_init.hoc
+
+load_file("mit3.hoc")
+
+cvode.active(1)		// turn variable time step on

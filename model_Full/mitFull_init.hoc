@@ -1,0 +1,26 @@
+// mitFull_init.hoc (for the Bhalla and Bower 1993 model)
+// Andrew Davison
+// 24-11-98
+// Modified: Shailesh Appukuttan 29-Sep-2020
+
+xopen("mit_param.hoc")			// parameter file
+xopen("mit_morph.hoc")		    // topology, geometry, compartmentalization
+xopen("mit_memb.hoc")           // membrane properties
+
+electrode_leak()
+
+// Insert stimuli
+Ifull		= 0.0		// nA; parameter to be set for specifying stimulus
+objref soma_stim, glom_stim
+soma {
+   soma_stim = new IClamp(0.5)
+   soma_stim.del = 0
+   soma_stim.amp = 0
+   soma_stim.dur = 0
+}
+glom {
+   glom_stim = new IClamp(0.5)
+   glom_stim.del = 0
+   glom_stim.amp = 0
+   glom_stim.dur = 0
+}
